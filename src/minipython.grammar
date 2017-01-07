@@ -1,0 +1,190 @@
+/*
+* Διακάκης Ελευθέριος - 3120036
+* Μπούζας Βασίλειος - 3120124
+* Ντούλος Ξενοφών - 3120133
+* Χρόνης Γεώργιος - 3120209
+*/
+
+
+Package minipython;
+
+Helpers
+	digit = ['0' .. '9'];
+	letter = ['a' .. 'z']|['A' .. 'Z']; 
+	cr = 13; 
+	lf = 10;
+	all = [0..127]; 
+	eol = lf | cr | cr lf ;
+	not_eol = [all - [cr + lf]];
+	tab = 9;	
+
+Tokens
+	tab = 9;
+	plus_plus = '++';
+	minus_minus = '--';
+	minus_eq = '-=';
+	div_eq = '/=';
+	eq = '==';
+	noteq = '!=';
+	colon = ':';
+	plus = '+';
+	minus = '-';
+	mult = '*';
+	div = '/';
+	assign = '=';
+	less = '<';
+	great = '>';
+	def = 'def';
+	l_par = '(';
+	r_par = ')';
+	l_br = '[';
+	r_br = ']';
+	comma=',';
+	if = 'if';
+	while = 'while';
+	for = 'for';
+	in = 'in';
+	print = 'print';
+	return = 'return';
+	true = 'true';
+	false = 'false';
+	blank =  (' ' | cr lf | cr | lf | tab)+ ;	
+	line_comment = '#' not_eol* eol; 
+	integer = digit+ ;
+	id = letter (letter | digit)*;
+	string = '"' (letter| ' ')* '"' | ''' (letter| ' ')* ''';
+	
+Ignored Tokens
+	blank, line_comment;
+	
+Productions
+	goal = {cmds}commands*{-> New goal.cmds( [commands] ) };
+	
+	commands = {func} function {-> New commands.func(function)} |
+			   {statement} statement {-> New commands.statement(statement)} ;
+	
+	function = {func}def id l_par argument? r_par colon statement {-> New function.func(id, argument, statement) };
+	
+	argument ={arg} id assign_value? more_args*{-> New argument.arg(id,assign_value,[more_args])} ;
+	
+	assign_value = assign value{ -> New assign_value(value)};
+	
+	more_args = comma id assign_value?{-> New more_args(id, assign_value)} ;
+	
+	statement =	{if} tab* if comparison colon statement{-> New statement.if(comparison,statement)} |
+				{while} tab* while comparison colon statement {-> New statement.while(comparison,statement)}|
+				{for} tab* for [id1]:id in [id2]:id colon statement {-> New statement.for(id1,id2,statement) }|
+				{return} tab* return expression {-> New statement.return(expression)}|
+				{print} tab* print expression more_exp*{-> New statement.print(expression,[more_exp]) } |
+				{op} tab* id assign expression {-> New statement.op(id,expression)}|
+				{list} tab* id l_br [exp1]:expression r_br assign [exp2]:expression {-> New statement.list(id,exp1,exp2)}|
+				{call} tab* function_call{-> New statement.call(function_call)};
+				  
+
+	expression = {arithm} arithmetics{->arithmetics.expression} |
+				 {prefix} prefix_arithm {->prefix_arithm.expression}|
+				 {postfix} postfix_arithm{-> postfix_arithm.expression} |
+				 {list} id l_br expression r_br {->New expression.list(id,expression)}|
+				 {morevalues} l_br value more_values* r_br {->New expression.morevalues(value,[more_values])};
+				 
+	prefix_arithm{-> expression} = {pre_plus_plus} plus_plus pre_post_elements{->New expression.pre_plus_plus(pre_post_elements)} |
+				   {pre_minus_minus} minus_minus pre_post_elements{->New expression.pre_minus_minus(pre_post_elements)} ;	
+
+	postfix_arithm{-> expression} = {post_plus_plus} pre_post_elements plus_plus {-> New expression.post_plus_plus(pre_post_elements)} |
+				   {post_minus_minus} pre_post_elements minus_minus{-> New expression.post_minus_minus(pre_post_elements)} ;
+				   
+	pre_post_elements = {id} id{->New pre_post_elements.id(id)} |
+						{list} id l_br expression r_br {-> New pre_post_elements.list(id, expression)};
+				 
+	more_values = comma value {-> New more_values(value)};
+	
+	arithmetics{-> expression} = {mult} multiplication{-> multiplication.expression} |
+				  {add} multiplication plus expression {-> New expression.add(multiplication.expression , expression)} |
+				  {sub} multiplication minus expression {-> New expression.sub(multiplication.expression , expression)};
+				
+	multiplication{-> expression} = {value} element{-> element.expression} |
+					 {multiplication} multiplication mult element {-> New expression.multiplication(multiplication.expression, element.expression)}|
+					 {division} multiplication div element {-> New expression.division(multiplication.expression, element.expression)};
+	
+	element{-> expression} = {value} value {-> New expression.value(value)} |
+			  {id} id {-> New expression.id(id)} |
+			  {func} function_call {-> New expression.func(function_call)}|
+			  {parenthesis} l_par expression r_par{-> New expression.parenthesis(expression)} ;						
+	
+	comparison = {true} true {-> New comparison.true()}|
+				{false} false{->New comparison.false()}|
+				{great} [exp1]:expression great [exp2]:expression{->New comparison.great(exp1,exp2)}|
+				{less} [exp1]:expression less [exp2]:expression{->New comparison.less(exp1,exp2)}|
+				{eq} [exp1]:expression eq [exp2]:expression{->New comparison.eq(exp1,exp2)}|
+				{noteq} [exp1]:expression noteq [exp2]:expression{->New comparison.noteq(exp1,exp2)};
+			
+	function_call = id l_par arg_list? r_par {-> New function_call(id, arg_list)};
+	
+	arg_list = expression more_exp*{-> New arg_list(expression, [more_exp])} ;
+	
+	more_exp = comma expression{->New more_exp(expression)} ;
+	
+	value = {number} number {-> New value.number(number)} |
+			{string} string{-> New value.string(string)}  ;
+			
+	number = integer{-> New number.int(integer)};
+	
+	
+Abstract Syntax Tree
+	goal = {cmds}commands*;
+	commands = {func}function 
+	          |{statement}statement;
+			  
+	function = {func} id argument statement;
+	
+	argument = {arg} id assign_value more_args*;
+    
+	assign_value = value;
+	
+	more_args = id assign_value;
+	
+	statement = {if} comparison statement|
+				{while} comparison statement|
+				{for} [id1]:id  [id2]:id  statement|
+				{return} expression|
+				{print} expression more_exp*|
+				{op} id  expression|
+				{list} id [exp1]:expression [exp2]:expression|
+				{call} function_call;
+
+    expression = {add}   [left]:expression [right]:expression 
+    			|{sub}[left]:expression [right]:expression 		
+			     |{multiplication} [left]:expression [right]:expression
+			     |{division} [left]:expression [right]:expression
+			     |{list} id expression
+			     |{morevalues} value more_values*
+			     |{pre_plus_plus}pre_post_elements
+			     |{pre_minus_minus}pre_post_elements
+			     |{post_plus_plus}pre_post_elements
+			     |{post_minus_minus}pre_post_elements
+			     |{value} value
+			     |{id} id
+			     |{func} function_call
+			     | {parenthesis} expression;
+
+
+    pre_post_elements= {list}id expression|
+    					{id} id;
+    more_values = value;
+
+    comparison = {great} [exp1]:expression  [exp2]:expression
+				 |{less} [exp1]:expression  [exp2]:expression 
+				 |{eq} [exp1]:expression  [exp2]:expression
+				 |{noteq} [exp1]:expression  [exp2]:expression
+	             |{true}
+	             |{false};
+				 
+	function_call = id arg_list ;
+	
+	arg_list = expression more_exp*;
+	more_exp = expression;
+
+
+	value = {number} number 
+	       |{string} string;
+	number =  {int}    integer;
