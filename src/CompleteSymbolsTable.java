@@ -553,7 +553,10 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 
 			rightVal = expParams.get(0);
 			rightLine = (int) expParams.get(1);
-
+                        if ((Integer)rightVal == 0){
+                            System.out.println("Division by zero"+" at line "+rightLine+ ". Exiting...");
+                            System.exit(-2);
+                        }
 			if (rightVal.getClass().equals(new Integer(0).getClass())) {
 				typeOfR = new Integer(0).getClass();
 			} else
