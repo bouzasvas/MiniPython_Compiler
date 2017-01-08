@@ -1,4 +1,10 @@
-def add(x,y):
-   return x + y
-k="hello world"	
-print add(2,k)
+a = 5
+b = 10
+c = a+b
+
+if a<b:
+	print a
+	
+d = "value"
+e = c+d
+print e

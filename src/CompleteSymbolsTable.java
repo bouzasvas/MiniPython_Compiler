@@ -12,12 +12,13 @@
  * 				Κλάση που γεμίζει τον Πίνακα Συμβόλων
  * 
  * 	Η κλάση αυτή ασχολείται με τον έλεγχο πιθανών σφαλμάτων που μπορούν να
- * 	προκύψουν κατά τη μεταγλώτιση του προγράμματος MiniPython.
+ * 	προκύψουν κατά τη μεταγλώττιση του προγράμματος MiniPython.
  * 
  * 	Συγκεκριμένα κάνει μεταξύ άλλων τους ακόλουθους ελέγχους:
  * 		1. Χρήση μη δηλωμένης μεταβλητής
  * 		2. Χρήση String μεταβλητής ως ακέραιο και
  * 	πολλούς άλλους ελέγχους που αφορούν πράξεις και συγκρίσεις 
+ * 		3. Επανάληψη δήλωσης συνάρτησης με τον ίδιο αριθμό ορισμάτων
  * 
  */
 
@@ -46,30 +47,104 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 		ArrayList argsList = null;
 		PStatement stat = node.getStatement();
 
-		// Διαχείριση Παραμέτρων Συνάρτησης
-		if (args != null) {
-			args.apply(this);
+		// Σε περίπτωση που δεν υπάρχει στο Symbols Table ελέγχω τη σύνταξη της
+		// και την προσθέτω
+		if (!this.symtable.containsKey(id)) {
+			// Διαχείριση Παραμέτρων Συνάρτησης
+			if (args != null) {
+				args.apply(this);
 
-			if (this.localVars.get(args) != null) {
-				/*
-				 * Η λίστα argsStat περιέχει: 1. Στο 1ο στοιχείο μια λίστα με
-				 * όλες τις παραμέτρους της συνάρτησης και τις default τιμές
-				 * τους 2. Στο 2ο στοιχείο τις εντολές της συάρτησης
-				 */
-				ArrayList argsStat = new ArrayList<>();
-				argsList = (ArrayList) this.localVars.get(args);
+				if (this.localVars.get(args) != null) {
+					/*
+					 * Η λίστα argsStat περιέχει: 1. Στο 1ο στοιχείο μια λίστα
+					 * με όλες τις παραμέτρους της συνάρτησης και τις default
+					 * τιμές τους 2. Στο 2ο στοιχείο τις εντολές της συάρτησης
+					 */
+					ArrayList argsStat = new ArrayList<>();
+					argsList = (ArrayList) this.localVars.get(args);
 
-				argsStat.add(argsList);
-				argsStat.add(stat);
+					argsStat.add(argsList);
+					argsStat.add(stat);
 
-				// Τελικά στον πίνακα συμβόλων εισάγεται ως Key το όνομα της
-				// συνάρτησης
-				// και ως Value η λίστα που περιέχει τις παραμέτρους και τις
-				// εντολές τις συνάρτησης
-				this.symtable.put(id, argsStat);
+					// Τελικά στον πίνακα συμβόλων εισάγεται ως Key το όνομα της
+					// συνάρτησης
+					// και ως Value η λίστα που περιέχει τις παραμέτρους και τις
+					// εντολές τις συνάρτησης
+					this.symtable.put(id, argsStat);
+				}
+			}
+			stat.apply(this);
+		} else { // Σε περίπτωση που υπάρχει δηλωμένη συνάρτηση με το ίδιο όνομα
+			ArrayList definedFunction = (ArrayList) this.symtable.get(id);
+			// Λίστα που περιέχει τις μεταβλητές της δηλωμένης συνάρτησης
+			ArrayList STArgs = ((ArrayList) (definedFunction.get(0)));
+
+			// Προσθήκη στο Symbols Table της νέας συνάρτησης
+			id += "_defined";
+			// Διαχείριση Παραμέτρων νέας Συνάρτησης
+			if (args != null) {
+				args.apply(this);
+
+				if (this.localVars.get(args) != null) {
+					/*
+					 * Η λίστα argsStat περιέχει: 1. Στο 1ο στοιχείο μια λίστα
+					 * με όλες τις παραμέτρους της συνάρτησης και τις default
+					 * τιμές τους 2. Στο 2ο στοιχείο τις εντολές της συάρτησης
+					 */
+					ArrayList argsStat = new ArrayList<>();
+					argsList = (ArrayList) this.localVars.get(args);
+
+					argsStat.add(argsList);
+					argsStat.add(stat);
+
+					// Τελικά στον πίνακα συμβόλων εισάγεται ως Key το όνομα της
+					// συνάρτησης
+					// και ως Value η λίστα που περιέχει τις παραμέτρους και τις
+					// εντολές τις συνάρτησης
+					this.symtable.put(id, argsStat);
+				}
+			}
+
+			// Λίστα που περιέχει τις μεταβλητές της νέας συνάρτησης
+			ArrayList newFunction = (ArrayList) this.symtable.get(id);
+			ArrayList newArgs = ((ArrayList) (definedFunction.get(0)));
+
+			// Αριρθμός Παραμέτρων Δηλωμένης Συνάρτησης
+			int numSTArgs = STArgs.size();
+			// Αριθμός Παραμέτρων που έχουν default τιμή
+			int defArgs = 0;
+
+			// Υπολογισμός αριθμού προκαθορισμένων παραμέτρων
+			for (int index = 0; index < numSTArgs; index++) {
+				AbstractMap.SimpleEntry arg = (AbstractMap.SimpleEntry) STArgs.get(index);
+
+				if (arg.getValue() != null) {
+					defArgs++;
+				}
+			}
+
+			// Αριθμός παραμέτρων νέας συνάρτησης
+			int definedNumArgs = newArgs.size();
+			int newDefArgs = 0;
+
+			// Υπολογισμός αριθμού προκαθορισμένων παραμέτρων νέας συνάρτησης
+			for (int index = 0; index < definedNumArgs; index++) {
+				AbstractMap.SimpleEntry arg = (AbstractMap.SimpleEntry) newArgs.get(index);
+
+				if (arg.getValue() != null) {
+					newDefArgs++;
+				}
+			}
+
+			//	Έλεγχος αν επαναλαμβάνεται η δήλωση μιας υπάρχουσας συνάρτησης
+			if (numSTArgs == definedNumArgs || numSTArgs == definedNumArgs - newDefArgs || numSTArgs - defArgs == definedNumArgs) {
+				//	Αφαίρεση της λάθος ορισμένης συνάρτησης από το Symbols Table
+				this.symtable.remove(id);
+				id = id.replace("_defined", "");
+				System.out.println("Function [" + id + "] at line " + line + " at pos " + pos + " is already defined!");
+				System.exit(-5);
 			}
 		}
-		stat.apply(this);
 	}
 
 	// Αφαίρεση των προσωρινά αποθηκευμένων παραμέτρων της συνάρτησης από το
@@ -77,9 +152,9 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 	public void outAFuncFunction(AFuncFunction node) {
 		String fName = node.getId().getText();
 		PStatement stat = node.getStatement();
-		
-		ArrayList argsList = (ArrayList) ((ArrayList)this.symtable.get(fName)).get(0);
-		
+
+		ArrayList argsList = (ArrayList) ((ArrayList) this.symtable.get(fName)).get(0);
+
 		for (Object ob : argsList) {
 			Object obKey = ((AbstractMap.SimpleEntry) ob).getKey();
 			this.symtable.remove(obKey);
@@ -113,8 +188,8 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 			arguments.add(new AbstractMap.SimpleEntry(arg1, null));
 		}
 
-		//	Προσθήκη της μεταβλητής στον πίνακα συμβόλων για το scope
-		//	της συνάρτησης. Στη συνέχεια θα αφαιρεθεί.
+		// Προσθήκη της μεταβλητής στον πίνακα συμβόλων για το scope
+		// της συνάρτησης. Στη συνέχεια θα αφαιρεθεί.
 		this.symtable.put(arg1, 0);
 
 		// Διάσχιση λίστας με παραμέτρους που ακολουθούν την 1η και
@@ -138,8 +213,8 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 
 				arguments.add(new AbstractMap.SimpleEntry(arg, val));
 
-				//	Προσθήκη της μεταβλητής στον πίνακα συμβόλων για το scope
-				//	της συνάρτησης. Στη συνέχεια θα αφαιρεθεί.
+				// Προσθήκη της μεταβλητής στον πίνακα συμβόλων για το scope
+				// της συνάρτησης. Στη συνέχεια θα αφαιρεθεί.
 				this.symtable.put(arg, 0);
 			}
 		}
@@ -251,7 +326,7 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 			this.symtable.put(id, value);
 
 			this.localVars.clear();
-			//System.out.println(this.symtable);
+			// System.out.println(this.symtable);
 		}
 	}
 
@@ -553,10 +628,10 @@ public class CompleteSymbolsTable extends DepthFirstAdapter {
 
 			rightVal = expParams.get(0);
 			rightLine = (int) expParams.get(1);
-                        if ((Integer)rightVal == 0){
-                            System.out.println("Division by zero"+" at line "+rightLine+ ". Exiting...");
-                            System.exit(-2);
-                        }
+			if (rightVal.equals(0)) {
+				System.out.println("Division by zero" + " at line " + rightLine + ". Exiting...");
+				System.exit(-2);
+			}
 			if (rightVal.getClass().equals(new Integer(0).getClass())) {
 				typeOfR = new Integer(0).getClass();
 			} else
